@@ -38,6 +38,12 @@ public class GetDataAPI : MonoBehaviour
         }
 
     }
+
+    private void Start()
+    {
+        StartCoroutine(GetDataFromAPI()); // Gọi hàm lấy dữ liệu từ API
+    }
+
     private void Clear_Object_Infor()
     {
         foreach (Transform child in parentTransform)
@@ -74,6 +80,7 @@ public class GetDataAPI : MonoBehaviour
     private void GetData()
     {
         Clear_Object_Infor();
+        GlobalVariable.command = "Get"; // Gán command = "Get" để biết là phải get data
         StartCoroutine(GetDataFromAPI()); // Gọi hàm lấy dữ liệu từ API
         Debug.Log("Get Data");
     }
@@ -106,7 +113,7 @@ public class GetDataAPI : MonoBehaviour
         getDataField.CheckCommand(GlobalVariable.command);
     }
 
-    IEnumerator GetDataFromAPI()
+    public IEnumerator GetDataFromAPI()
     {
         GlobalVariable.send_Request_Status = false;
 
@@ -126,10 +133,13 @@ public class GetDataAPI : MonoBehaviour
                 {
                     Debug.Log("Get Success");
                     List<Student_Infor_Model> dataList = JsonConvert.DeserializeObject<List<Student_Infor_Model>>(jsonResponse); // Chuyển json thành list
-                    PopulateScrollView(dataList);
+                    GlobalVariable.studentList = dataList; // Gán list vào biến global
+                    if (GlobalVariable.command == "Get")
+                    {
+                        PopulateScrollView(dataList);
+                    }
                 }
             }
-
             catch (Exception e)
             {
                 Debug.Log("Error: " + e.Message);
@@ -173,6 +183,8 @@ public class GetDataAPI : MonoBehaviour
             }
             response.Dispose();
         }
+        StartCoroutine(GetDataFromAPI());
+        GlobalVariable.send_Request_Status = true;
     }
 
     public IEnumerator PutDataToAPI(Student_Infor_Model student)
@@ -210,6 +222,8 @@ public class GetDataAPI : MonoBehaviour
             }
             response.Dispose();
         }
+        StartCoroutine(GetDataFromAPI());
+        GlobalVariable.send_Request_Status = true;
     }
 
     public IEnumerator DeleteDataFromAPI(string studentId)
@@ -241,29 +255,26 @@ public class GetDataAPI : MonoBehaviour
             }
             response.Dispose();
         }
+        StartCoroutine(GetDataFromAPI());
+        GlobalVariable.send_Request_Status = true;
     }
 
     public IEnumerator PatchDataToAPI(Student_Infor_Model student)
     {
         GlobalVariable.send_Request_Status = false;
+
+        string url = $"{GlobalVariable.url}/{student.studentId}";
         UnityWebRequest response = null;
         try
         {
-            string endpoint = student.studentId;
-            string url = GlobalVariable.url + "/" + endpoint;
             string jsonData = JsonConvert.SerializeObject(student);
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
-
             response = new UnityWebRequest(url, "PUT")
             {
                 uploadHandler = new UploadHandlerRaw(bodyRaw),
                 downloadHandler = new DownloadHandlerBuffer()
             };
-            //  response.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            // response.downloadHandler = new DownloadHandlerBuffer();
-            response.SetRequestHeader("Content-Type", "application/offset+octet-stream");
-
-            //  response.SetRequestHeader("Content-Type", "application/json");
+            response.SetRequestHeader("Content-Type", "application/json");
         }
         catch (Exception e)
         {
@@ -283,6 +294,8 @@ public class GetDataAPI : MonoBehaviour
             }
             response.Dispose();
         }
+        StartCoroutine(GetDataFromAPI());
+        GlobalVariable.send_Request_Status = true;
         /*  UnityWebRequest www = UnityWebRequestTexture.GetTexture("http://www.my-server.com/image.png");
           Texture myTexture = ((DownloadHandlerTexture)www.downloadHandler).texture;
 

@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System;
 using Unity.VisualScripting;
+using Mono.Cecil.Cil;
 
 public class GetDataField : MonoBehaviour
 {
@@ -37,7 +38,7 @@ public class GetDataField : MonoBehaviour
         }
         else
         {
-
+            Debug.LogWarning("Button is null");
         }
 
         if (backButton != null)
@@ -46,7 +47,7 @@ public class GetDataField : MonoBehaviour
         }
         else
         {
-
+            Debug.LogWarning("Button is null");
         }
     }
 
@@ -59,11 +60,24 @@ public class GetDataField : MonoBehaviour
                 string value = inputField.text;
                 var propertyName = inputField.name.Split('_')[0];
                 var property = student_Infor_Model.GetType().GetProperty(propertyName);
+
+                if (GlobalVariable.command == "Patch")
+                {
+                    Debug.Log("CheckPatchData");
+                    CheckPatchData(ref student_Infor_Model);
+                }
                 if (property != null)
                 {
-                    if (int.TryParse(value, out int valueConverted) && !propertyName.Contains("Id"))
+                    if (property.PropertyType == typeof(int))
                     {
-                        property.SetValue(student_Infor_Model, valueConverted);
+                        if (int.TryParse(value, out int valueConverted))
+                        {
+                            property.SetValue(student_Infor_Model, valueConverted);
+                        }
+                        else
+                        {
+                            Debug.LogError($"Invalid value for {propertyName}. Expected an integer.");
+                        }
                     }
                     else
                     {
@@ -71,8 +85,8 @@ public class GetDataField : MonoBehaviour
                     }
                 }
             }
-            DoCommand(GlobalVariable.command); // Thực hiện lệnh
         }
+        DoCommand(GlobalVariable.command); // Thực hiện lệnh
     }
 
     private void BackToMenu()
@@ -147,21 +161,28 @@ public class GetDataField : MonoBehaviour
 
     private void AdjustTransformDataField(int count) // Điều chỉnh kích thước của dataField
     {
-        if (count == 1)
+        Vector2 newSize;
+        float height;
+
+        switch (count)
         {
-            content.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, 250);
-            dataField.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, 300);
+            case 1:
+                height = 250;
+                break;
+            case 3:
+                height = 550;
+                break;
+            case 4:
+                height = 700;
+                break;
+            default:
+                Debug.LogWarning("Unexpected count value");
+                return;
         }
-        else if (count == 3)
-        {
-            content.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, 550);
-            dataField.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, 550);
-        }
-        else if (count == 4)
-        {
-            content.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, 700);
-            dataField.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, 700);
-        }
+
+        newSize = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, height);
+        content.GetComponent<RectTransform>().sizeDelta = newSize;
+        dataField.GetComponent<RectTransform>().sizeDelta = new Vector2(newSize.x, height + 50);
     }
 
     private void DoCommand(string command) // Thực hiện các lệnh
@@ -191,6 +212,7 @@ public class GetDataField : MonoBehaviour
             case "Patch":
                 if (count == 4)
                 {
+                    // CheckPatchData(student_Infor_Model);
                     StartCoroutine(getDataAPI.PatchDataToAPI(student_Infor_Model)); // Gọi hàm patch data trong GetDataAPI
                 }
                 else
@@ -199,6 +221,33 @@ public class GetDataField : MonoBehaviour
             default:
                 Debug.LogWarning("Unknown command");
                 break;
+        }
+    }
+
+    private void CheckPatchData(ref Student_Infor_Model student_Infor_Model) // Kiểm tra dữ liệu cần patch
+    {
+        foreach (var student in GlobalVariable.studentList)
+        {
+            if (student.studentId == student_Infor_Model.studentId)
+            {
+                var properties = student_Infor_Model.GetType().GetProperties();
+                foreach (var property in properties)
+                {
+                    var newValue = property.GetValue(student_Infor_Model);
+                    var oldValue = property.GetValue(student);
+
+                    if (newValue == null || newValue.ToString() == "")
+                    {
+                        property.SetValue(student_Infor_Model, oldValue);
+                        // Debug.LogError($"Field {property.Name} is null.");
+                    }
+                    else if (!newValue.Equals(oldValue))
+                    {
+                        Debug.Log($"Field {property.Name} has been updated from {oldValue} to {newValue}");
+                    }
+                }
+            }
+            // break;
         }
     }
 }

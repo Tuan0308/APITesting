@@ -9,5 +9,6 @@ public class GlobalVariable : MonoBehaviour
     static public string url = "https://66e7157e17055714e58b6fd2.mockapi.io/api/training/students";
     static public bool send_Request_Status = false;
     static public string command = null;
+    static public List<Student_Infor_Model> studentList = new List<Student_Infor_Model>();
 }
 
